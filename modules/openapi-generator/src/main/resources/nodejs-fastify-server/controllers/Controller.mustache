@@ -1,0 +1,18 @@
+import { FastifyRequest } from 'fastify';
+
+import {
+   I...
+} from '@base/shared';
+import {
+    I...
+} from '../types';
+import { {{module_camelCase}}Service } from '../services/{{module}}.service';
+
+export class PartnerController {
+    constructor(private readonly partnerService: PartnerService) {}
+
+  /// EXAMPLE: 
+    async updatePartner({ session: { userId }, body }: FastifyRequest<{ Body: IPartner }>): Promise<void> {
+        await this.partnerService.updatePartner(userId, body);
+    }
+}

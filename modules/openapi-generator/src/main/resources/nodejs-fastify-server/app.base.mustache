@@ -1,0 +1,19 @@
+import { BaseModule } from './modules/base.module';
+import { DataSource } from 'typeorm';
+import { Logger } from 'winston';
+import { ProductionEnvironment } from '@environments/production.environment';
+import { SessionService } from './shared/services/session.service';
+
+export type AppModules = 'billing' | 'partner' | 'commission' | 'auth';
+
+export type AppModuleMap = Map<AppModules, BaseModule>;
+
+export interface BaseApplication {
+    environment: ProductionEnvironment;
+    logger: Logger;
+    modules: AppModuleMap;
+    sessionService?: SessionService;
+    databaseClient?: DataSource;
+}
+
+export default BaseApplication;

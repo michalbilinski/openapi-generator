@@ -1,0 +1,14 @@
+import { IExportabilityAllowance } from '@base/shared';
+import { AfterLoad, BaseEntity, CreateDateColumn, PrimaryGeneratedColumn, SelectQueryBuilder, UpdateDateColumn } from 'typeorm';
+import { UserEntity } from '../user.entity';
+
+export abstract class BaseRecord extends BaseEntity {
+    @PrimaryGeneratedColumn('uuid')
+    public id: string;
+
+    @UpdateDateColumn({ name: 'updated_at' })
+    public updatedAt?: Date;
+
+    @CreateDateColumn({ name: 'created_at' })
+    public createdAt?: Date;
+}

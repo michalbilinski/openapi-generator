@@ -18,6 +18,7 @@ package org.openapitools.codegen.languages;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -26,6 +27,7 @@ import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.info.Info;
 import lombok.Getter;
 import lombok.Setter;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.openapitools.codegen.*;
@@ -46,11 +48,12 @@ import java.net.URL;
 import java.util.*;
 import java.util.Map.Entry;
 
+import org.apache.commons.codec.net.QCodec;
 import static org.openapitools.codegen.utils.StringUtils.camelize;
 
-public class NodeJSExpressServerCodegen extends DefaultCodegen implements CodegenConfig {
+public class NodeJSFastifyServerCodegen extends AbstractTypeScriptServerCodegen {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(NodeJSExpressServerCodegen.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(NodeJSFastifyServerCodegen.class);
     public static final String EXPORTED_NAME = "exportedName";
     public static final String SERVER_HOST = "serverHost";
     public static final String SERVER_PORT = "serverPort";
@@ -63,7 +66,7 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
     @Setter
     protected String exportedName;
 
-    public NodeJSExpressServerCodegen() {
+    public NodeJSFastifyServerCodegen() {
         super();
 
         modifyFeatureSet(features -> features
@@ -86,12 +89,25 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
                 )
         );
 
+        typeMapping.put("file", "RequestFile");
+        // RequestFile is defined as: `type RequestFile = string | Buffer | ReadStream | RequestDetailedFile;`
+        languageSpecificPrimitives.add("Buffer");
+        languageSpecificPrimitives.add("ReadStream");
+        languageSpecificPrimitives.add("RequestDetailedFile");
+        languageSpecificPrimitives.add("RequestFile");
+
+        // clear import mapping (from default generator) as TS does not use it
+        // at the moment
+        importMapping.clear();
+
+        typeMapping.put("DateTime", "Date");
+
         generatorMetadata = GeneratorMetadata.newBuilder(generatorMetadata)
-                .stability(Stability.BETA)
+                .stability(Stability.EXPERIMENTAL)
                 .build();
 
-        outputFolder = "generated-code/nodejs-express-server";
-        embeddedTemplateDir = templateDir = "nodejs-express-server";
+        outputFolder = "generated-code/nodejs-fastify-server";
+        embeddedTemplateDir = templateDir = "nodejs-fastify-server";
 
         setReservedWordsLowerCase(
                 Arrays.asList(
@@ -102,14 +118,17 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
                         "void", "while", "with", "yield")
         );
 
+        modelTemplateFiles.put("model.mustache", ".ts");
+        // TODO: create database entities
+        // TODO: for each model create DTO's 
+        modelPackage = "model";
+
         additionalProperties.put("apiVersion", apiVersion);
         additionalProperties.put("implFolder", implFolder);
 
-        // no model file
-        modelTemplateFiles.clear();
-
-        apiTemplateFiles.put("controller.mustache", ".js");
-        apiTemplateFiles.put("service.mustache", ".js");
+        apiTemplateFiles.put("bootstrpa.mustache", ".ts");
+        apiTemplateFiles.put("controller.mustache", ".ts");
+        apiTemplateFiles.put("service.mustache", ".ts");
 
         supportingFiles.add(new SupportingFile("openapi.mustache", "api", "openapi.yaml"));
         supportingFiles.add(new SupportingFile("config.mustache", "", "config.js"));
@@ -124,20 +143,16 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
         // controllers folder
         supportingFiles.add(new SupportingFile("controllers" + File.separator + "index.mustache", "controllers", "index.js"));
         supportingFiles.add(new SupportingFile("controllers" + File.separator + "Controller.mustache", "controllers", "Controller.js"));
+
         // service folder
         supportingFiles.add(new SupportingFile("services" + File.separator + "index.mustache", "services", "index.js"));
         supportingFiles.add(new SupportingFile("services" + File.separator + "Service.mustache", "services", "Service.js"));
 
-        // https://blogs.musadiqpeerzada.com/building-back-end-state-machines-with-xstate
-        // the fsm have the guard and do logic. The services just implemnt initing the state machine & loading the state machine
-        // the state machines are defined in a separate folder, where everything is abstracted away
-        // the generated code for the api and the fsm are then glued together in a really simple fashion
-        // that way the backend logic is visually represented and not capsuled in the models code
-        // the fsm is also responsible for the authorization with the guards
-        // the bootstrap code build one module-fsm and one submodule-fsm. Therefore the logic builds in parallel.
-        // Models stay almost completely isolated.
-        supportingFiles.add(new SupportingFile("fsm" + File.separator + "FSM.mustache", "fsm", "FinalStateMachine.ts"));
-
+        // modules folder
+        // TODO: create HTTP worker
+        // plugins handlers and routes
+        // TODO: create CRON worker
+        // TODO: create AMQP worker - is own Open API Spec
         // do not overwrite if the file is already present
         supportingFiles.add(new SupportingFile("package.mustache", "", "package.json")
                 .doNotOverwrite());
@@ -146,6 +161,8 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
 
         cliOptions.add(new CliOption(SERVER_PORT,
                 "TCP port to listen on."));
+
+        supportModelPropertyNaming(CodegenConstants.MODEL_PROPERTY_NAMING_TYPE.camelCase);
     }
 
     @Override
@@ -172,7 +189,7 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
      */
     @Override
     public String getName() {
-        return "nodejs-express-server";
+        return "nodejs-fastfiy-server";
     }
 
     /**
@@ -183,7 +200,7 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
      */
     @Override
     public String getHelp() {
-        return "Generates a NodeJS Express server (alpha). IMPORTANT: this generator may subject to breaking changes without further notice).";
+        return "Generates a NodeJS fastify server (experimental). IMPORTANT: this generator may subject to breaking changes without further notice).";
     }
 
     @Override
@@ -462,6 +479,6 @@ public class NodeJSExpressServerCodegen extends DefaultCodegen implements Codege
 
     @Override
     public GeneratorLanguage generatorLanguage() {
-        return GeneratorLanguage.JAVASCRIPT;
+        return GeneratorLanguage.TYPESCRIPT;
     }
 }

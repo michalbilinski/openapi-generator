@@ -1,0 +1,84 @@
+{{>licenseInfo}}
+{{#models}}
+{{#model}}
+import { BaseRecord } from './base/base-record.entity';
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
+{{#tsImports}}
+import { {{classname}} } from '{{filename}}';
+{{/tsImports}}
+
+{{#description}}
+/**
+* {{{.}}}
+*/
+{{/description}}
+{{^isEnum}}
+@Entity('{{tableName}}')
+export class {{classname}} extends BaseRecord {
+{{#vars}}
+{{#description}}
+    /**
+    * {{{.}}}
+    */
+{{/description}}
+    @Column({{#primary}}{ primary: true }{{/primary}}{{^primary}}{{#typeOptions}}, {{typeOptions}}{{/typeOptions}}{{/primary}})
+    {{name}}{{^required}}?{{/required}}: {{#isEnum}}{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{#isNullable}} | null{{/isNullable}}{{/isEnum}}{{#defaultValue}} = {{#isEnum}}{{classname}}.{{/isEnum}}{{{.}}}{{/defaultValue}};
+{{/vars}}
+
+{{#discriminator}}
+    static discriminator: string | undefined = "{{discriminatorName}}";
+{{/discriminator}}
+{{^discriminator}}
+    static discriminator: string | undefined = undefined;
+{{/discriminator}}
+
+{{#hasRelations}}
+{{#relations}}
+    @{{relationType}}(() => {{targetEntity}}, {{relationOptions}})
+    {{name}}{{^required}}?{{/required}}: {{targetEntity}};
+{{/relations}}
+{{/hasRelations}}
+
+    static attributeTypeMap: Array<{ name: string, baseName: string, type: string }> = [
+        {{#vars}}
+        {
+            "name": "{{name}}",
+            "baseName": "{{baseName}}",
+            "type": "{{#isEnum}}{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}"
+        }{{^-last}},
+        {{/-last}}
+        {{/vars}}
+    ];
+
+    static getAttributeTypeMap() {
+        return {{classname}}.attributeTypeMap;
+    }
+}
+
+{{#hasEnums}}
+export namespace {{classname}} {
+{{#vars}}
+{{#isEnum}}
+    export enum {{enumName}} {
+        {{#allowableValues}}
+        {{#enumVars}}
+        {{name}} = {{{value}}}{{^-last}},{{/-last}}
+        {{/enumVars}}
+        {{/allowableValues}}
+    }
+{{/isEnum}}
+{{/vars}}
+}
+{{/hasEnums}}
+{{/isEnum}}
+{{#isEnum}}
+export enum {{classname}} {
+    {{#allowableValues}}
+    {{#enumVars}}
+    {{name}} = {{{value}}}{{^-last}},{{/-last}}
+    {{/enumVars}}
+    {{/allowableValues}}
+}
+{{/isEnum}}
+{{/model}}
+{{/models}}

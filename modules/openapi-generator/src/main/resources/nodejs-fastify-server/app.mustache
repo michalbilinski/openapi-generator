@@ -1,0 +1,18 @@
+import 'reflect-metadata';
+import * as dotenv from 'dotenv';
+import { Master, CronBootstrap, HTTPBootstrap, AMQPBootstrap } from '@bootstrap';
+import cluster from 'cluster';
+
+dotenv.config();
+
+if (cluster.isPrimary) {
+    new Master().run();
+} else if (process.env.APP_TYPE === 'http') {
+    new HTTPBootstrap().run();
+} else if (process.env.APP_TYPE === 'cron') {
+    new CronBootstrap().run();
+} else if (process.env.APP_TYPE === 'amqp') {
+    new CronBootstrap().run();
+} else {
+    process.exit(126);
+}
